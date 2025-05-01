@@ -1,26 +1,35 @@
-name: CI
+name: Solidity CI
 
 on:
   push:
     branches: [main]
   pull_request:
+    branches: [main]
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
-      - uses: actions/checkout@v3
+      # 1. Check out the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      # 1. Install node modules (lockfile ensures OZ version)
-      - uses: actions/setup-node@v4
+      # 2. Set up Node.js and cache npm
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 18
-          cache: "npm"
-      - run: npm ci
+          cache: npm
 
-      # 2. Install solc-select and pin 0.8.20
-      - name: Install solc-select
+      # 3. Install project dependencies
+      - name: Install dependencies
+        run: npm ci
+
+      # 4. Install solc-select and pin to 0.8.20
+      - name: Install solc-select & pin compiler
         run: |
           sudo apt-get update && sudo apt-get install -y python3-pip
           pip3 install solc-select
@@ -28,8 +37,18 @@ jobs:
           solc-select use 0.8.20
           solc --version
 
-      # 3. Compile & test
-      - run: npx hardhat compile
-      - run: npx hardhat test --network hardhat
-      - run: npx slither contracts
-      - run: npx echidna-test contracts/EchidnaHarness.sol --contract EchidnaHarness
+      # 5. Compile your contracts (fail-fast if errors)
+      - name: Compile contracts
+        run: npx hardhat compile --show-stack-traces
+
+      # 6. Run your test suite
+      - name: Run tests
+        run: npx hardhat test --network hardhat
+
+      # 7. Static analysis with Slither
+      - name: Static analysis (Slither)
+        run: npx slither contracts
+
+      # 8. Fuzz testing with Echidna
+      - name: Fuzz tests (Echidna)
+        run: npx echidna-test contracts/EchidnaHarness.sol --contract EchidnaHarness
