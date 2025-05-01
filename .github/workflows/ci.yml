@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      # 1. Install node modules (lockfile ensures OZ version)
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: "npm"
+      - run: npm ci
+
+      # 2. Install solc-select and pin 0.8.20
+      - name: Install solc-select
+        run: |
+          sudo apt-get update && sudo apt-get install -y python3-pip
+          pip3 install solc-select
+          solc-select install 0.8.20
+          solc-select use 0.8.20
+          solc --version
+
+      # 3. Compile & test
+      - run: npx hardhat compile
+      - run: npx hardhat test --network hardhat
+      - run: npx slither contracts
+      - run: npx echidna-test contracts/EchidnaHarness.sol --contract EchidnaHarness

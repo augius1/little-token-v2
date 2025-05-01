@@ -1,0 +1,16 @@
+# echidna-config.yaml
+
+solcArgs:
+  - "--base-path"
+  - "/src"
+  - "--include-path"
+  - "/src/node_modules"
+  - "--allow-paths"
+  - "/src,/src/node_modules"
+  # remap @openzeppelin/ to its package root
+  - "@openzeppelin/=/src/node_modules/@openzeppelin/"
+
+cryticArgs:
+  # only need remapping for Slither/CryticCompile
+  - "--solc-remaps"
+  - "@openzeppelin/=/src/node_modules/@openzeppelin/"
