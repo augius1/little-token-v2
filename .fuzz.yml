@@ -1,0 +1,64 @@
+# ======================================
+# Diligence Fuzzing Configuration File
+# Generated via `fuzz config generate`
+# ======================================
+
+# ========== ANALYZE SECTION ==========
+# Any CLI defaults or fine‐tuning of the solidity compiler
+analyze:
+  # remappings:                          # if you need custom remappings for imports
+  #  - '@openzeppelin=./node_modules/@openzeppelin'
+  #  - '@ozUpgradesV3=OpenZeppelin/openzeppelin-contracts-upgradeable@3.3.0'
+
+  # Override solc version if needed
+  # solc-version: '0.8.20'
+
+  # You can also pass any other flags supported by `fuzz analyze` here
+
+# ============ FUZZ SECTION ===========
+fuzz:
+  # smart_mode true ⇒ CLI auto-detects build & source dirs
+  smart_mode: true # :contentReference[oaicite:1]{index=1}
+
+  # Number of CPU cores to leverage (1–4)
+  number_of_cores: 1
+
+  # RPC endpoint used to seed chain state
+  rpc_url: "http://localhost:8545"
+
+  # Prefix for naming your campaigns
+  campaign_name_prefix: "little_token"
+
+  # When quick_check is true, run a lightweight pre-check
+  quick_check: false
+
+  # ====== Optional overrides (commented) ======
+  # build_directory: "./artifacts"            # Hardhat build output
+  # sources_directory: "./contracts"         # Where your .sol lives
+  # chain_id: '0x1'                          # Defaults to mainnet chain ID
+  # enable_cheat_codes: true                 # Enable solidity cheat codes
+  #
+  # If you want to fuzz an already-deployed contract, specify:
+  # deployed_contract_address: '0x1234…'
+  #
+  # To include other contracts in coverage reporting:
+  # additional_contracts_addresses:
+  #   - '0xABCD…'
+  #   - '0xEF01…'
+
+# ========== CAMPAIGN SECTION ==========
+campaign:
+  # Fully‐qualified entrypoint: <file>:<contractName>
+  entrypoint: "contracts/EchidnaHarness.sol:EchidnaHarness"
+
+  # Maximum time (in seconds) per campaign run
+  timeout: 300
+
+  # Maximum number of generated examples
+  max-examples: 100000
+
+  # Optional project grouping
+  # project: "LittleCoinV2-Fuzz"
+
+  # Optional tags or metadata for filtering
+  # tags: ["invariant", "echidna"]

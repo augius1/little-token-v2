@@ -1,0 +1,79 @@
+name: 🔐 Security & Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-scan:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        tool: [build, slither, echidna, mythx, solidityscan, defiscanner]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Build & Test
+      - if: matrix.tool == 'build'
+        name: Setup Node.js & Install
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: "npm"
+      - if: matrix.tool == 'build'
+        run: npm ci
+      - if: matrix.tool == 'build'
+        run: npx hardhat compile --show-stack-traces
+      - if: matrix.tool == 'build'
+        run: npx hardhat test --network hardhat
+
+      # Slither Static Analysis
+      - if: matrix.tool == 'slither'
+        name: Run Slither
+        uses: crytic/slither-action@v0.4.1
+        with:
+          solc-version: 0.8.20
+          fail-on: high
+
+      # Echidna Fuzzing
+      - if: matrix.tool == 'echidna'
+        name: Run Echidna
+        uses: crytic/echidna-action@v0.7.0
+        with:
+          solc-version: 0.8.20
+          echidna-version: latest
+          files: contracts/EchidnaHarness.sol
+          negate-exit-status: false
+
+      # MythX Analysis
+      - if: matrix.tool == 'mythx'
+        name: Install MythX CLI
+        run: npm install -g mythx-cli
+      - if: matrix.tool == 'mythx'
+        name: Run MythX Analysis
+        run: |
+          mythx analyze \
+            --solc-version 0.8.20 \
+            --mode quick \
+            --api-key ${{ secrets.MYTHX_API_KEY }}
+
+      # SolidityScan QuickScan
+      - if: matrix.tool == 'solidityscan'
+        name: Run SolidityScan QuickScan
+        run: |
+          curl -X POST https://api.solidityscan.com/quickscan \
+            -H "x-api-key: ${{ secrets.SOLIDITYSCAN_API_KEY }}" \
+            -F "source=@./contracts"
+
+      # De.fi Scanner QuickScan
+      - if: matrix.tool == 'defiscanner'
+        name: Run De.fi Scanner QuickScan
+        run: |
+          curl -X POST https://api.defi-scanner.com/quickscan \
+            -H "Authorization: Bearer ${{ secrets.DEFISCANNER_TOKEN }}" \
+            -F "repoUrl=https://github.com/${{ github.repository }}" \
+            -F "branch=${{ github.ref_name }}"
