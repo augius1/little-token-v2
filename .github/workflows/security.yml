@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        tool: [build, slither, echidna, mythx, solidityscan, defiscanner]
+        tool: [build, slither, echidna, diligence, solidityscan, defiscanner]
 
     steps:
       - name: Checkout code
@@ -19,11 +19,11 @@ jobs:
 
       # Build & Test
       - if: matrix.tool == 'build'
-        name: Setup Node.js & Install
+        name: Setup Node.js & Install Dependencies
         uses: actions/setup-node@v4
         with:
           node-version: 18
-          cache: "npm"
+          cache: npm
       - if: matrix.tool == 'build'
         run: npm ci
       - if: matrix.tool == 'build'
@@ -39,41 +39,47 @@ jobs:
           solc-version: 0.8.20
           fail-on: high
 
-      # Echidna Fuzzing
+      # Echidna Invariant Fuzzing
       - if: matrix.tool == 'echidna'
         name: Run Echidna
-        uses: crytic/echidna-action@v0.7.0
+        uses: crytic/echidna-action@v2.0.2
         with:
           solc-version: 0.8.20
           echidna-version: latest
           files: contracts/EchidnaHarness.sol
           negate-exit-status: false
 
-      # MythX Analysis
-      - if: matrix.tool == 'mythx'
-        name: Install MythX CLI
-        run: npm install -g mythx-cli
-      - if: matrix.tool == 'mythx'
-        name: Run MythX Analysis
+      # Diligence Fuzzing
+      - if: matrix.tool == 'diligence'
+        name: Install Diligence Fuzzing CLI
+        run: python3 -m pip install diligence-fuzzing
+      - if: matrix.tool == 'diligence'
+        name: Run Diligence Fuzzing Campaign
+        env:
+          FUZZ_API_KEY: ${{ secrets.FUZZ_API_KEY }}
+          RPC_URL: "http://127.0.0.1:8545"
         run: |
-          mythx analyze \
-            --solc-version 0.8.20 \
-            --mode quick \
-            --api-key ${{ secrets.MYTHX_API_KEY }}
+          npx hardhat node &
+          sleep 3
+          fuzz run --config .fuzz.yml
 
       # SolidityScan QuickScan
       - if: matrix.tool == 'solidityscan'
         name: Run SolidityScan QuickScan
+        env:
+          SOLIDITYSCAN_API_KEY: ${{ secrets.SOLIDITYSCAN_API_KEY }}
         run: |
           curl -X POST https://api.solidityscan.com/quickscan \
-            -H "x-api-key: ${{ secrets.SOLIDITYSCAN_API_KEY }}" \
+            -H "x-api-key: $SOLIDITYSCAN_API_KEY" \
             -F "source=@./contracts"
 
       # De.fi Scanner QuickScan
       - if: matrix.tool == 'defiscanner'
         name: Run De.fi Scanner QuickScan
+        env:
+          DEFISCANNER_TOKEN: ${{ secrets.DEFISCANNER_TOKEN }}
         run: |
           curl -X POST https://api.defi-scanner.com/quickscan \
-            -H "Authorization: Bearer ${{ secrets.DEFISCANNER_TOKEN }}" \
+            -H "Authorization: Bearer $DEFISCANNER_TOKEN" \
             -F "repoUrl=https://github.com/${{ github.repository }}" \
             -F "branch=${{ github.ref_name }}"
